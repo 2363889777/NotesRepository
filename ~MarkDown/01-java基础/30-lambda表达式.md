@@ -491,3 +491,108 @@ void accept(T t);
 
 ## 二、lambda进阶
 
+### 1）Optional
+
+解决问题：
+
+​	在日常编码中null，会被理解成两种意思，
+
+​	1.查询数据没有，返回null，表示空
+
+~~~java
+Map<String> map = new HashMap<String>();
+return map.get("hhh");	//查不到，返回null
+~~~
+
+​	2.表示不存在
+
+~~~java
+if(成功){
+    return "成功";
+}else{
+    return null;
+}
+~~~
+
+我们不知道什么时候需要在使用前判断是否为null，通过optional来提示需要进行提示，和分辨到底是没有数据还是不存在。
+
+#### **orElse()和 orElseGet() 的不同之处**
+
+如果为空，则返回设置的默认值
+
+乍一看，这两种方法似乎起着同样的作用。然而事实并非如此。我们创建一些示例来突出二者行为上的异同。
+
+我们先来看看对象为空时他们的行为：
+
+```java
+@Test
+public void givenEmptyValue_whenCompare_thenOk() {
+    User user = null;
+    logger.debug("Using orElse");
+    User result = Optional.ofNullable(user).orElse(createNewUser());
+    logger.debug("Using orElseGet");
+    User result2 = Optional.ofNullable(user).orElseGet(() -> createNewUser());
+}
+
+private User createNewUser() {
+    logger.debug("Creating New User");
+    return new User("extra@gmail.com", "1234");
+}
+```
+
+上面的代码中，两种方法都调用了 *createNewUser()* 方法，这个方法会记录一个消息并返回 *User* 对象。
+
+代码输出如下：
+
+```java
+Using orElse
+Creating New User
+Using orElseGet
+Creating New User
+```
+
+由此可见，当对象为空而返回默认对象时，行为并无差异。
+
+我们接下来看一个类似的示例，但这里 *Optional*  不为空：
+
+```java
+@Test
+public void givenPresentValue_whenCompare_thenOk() {
+    User user = new User("john@gmail.com", "1234");
+    logger.info("Using orElse");
+    User result = Optional.ofNullable(user).orElse(createNewUser());
+    logger.info("Using orElseGet");
+    User result2 = Optional.ofNullable(user).orElseGet(() -> createNewUser());
+}
+```
+
+这次的输出：
+
+```java
+Using orElse
+Creating New User
+Using orElseGet
+```
+
+这个示例中，两个 *Optional*  对象都包含非空值，两个方法都会返回对应的非空值。不过，*orElse()* 方法仍然创建了 *User* 对象。**与之相反，orElseGet() 方法不创建 User对象。**
+
+在执行较密集的调用时，比如调用 Web 服务或数据查询，**这个差异会对性能产生重大影响**。
+
+### **返回异常**
+
+除了 *orElse()* 和 *orElseGet()* 方法，Optional 还定义了 *orElseThrow()* API —— 它会在对象为空的时候抛出异常，而不是返回备选的值：
+
+```java
+@Test(expected = IllegalArgumentException.class)
+public void whenThrowException_thenOk() {
+    User result = Optional.ofNullable(user)
+      .orElseThrow(() -> new IllegalArgumentException());
+}
+```
+
+这里，如果 *user* 值为 null，会抛出 *IllegalArgumentException*。
+
+这个方法让我们有更丰富的语义，可以决定抛出什么样的异常，而不总是抛出 *NullPointerException*。
+
+现在我们已经很好地理解了如何使用 Optional，我们来看看其它可以对 *Optional* 值进行转换和过滤的方法。
+
